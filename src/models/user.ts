@@ -1,50 +1,65 @@
-import mongoose, { Document } from "mongoose";
+ import mongoose, { Types } from "mongoose";
+import { UserRole } from "../types/user.types";
 import jwt from "jsonwebtoken";
 
 export interface IUser extends Document {
-    name: string,
-    email: string,
-    password: string,
-    profilePhotoUrl?: string,
-    role: "admin" | "student",
+    _id: Types.ObjectId;
+    email: string;
+    userName: string;
+    password: string;
+    profilePic: string;
+    bio?: string;
+    role: UserRole;
+    friendsCount: number;
+    postCount: number;
     getJwt(): string
 }
 
-const UserSchema = new mongoose.Schema<IUser> ({
-    name: {
-        type: String,
-        minLength: 1,
-        maxLength: 255,
-        required: true
-    },
+const userSchema = new mongoose.Schema<IUser>({
     email: {
         type: String,
-        unique: true,
-        required: true
+        required: true,
+        unique: true
+    },
+    userName: {
+        type: String,
+        required: true,
     },
     password: {
         type: String,
         required: true,
         minLength: 6
     },
-    profilePhotoUrl: {
+    profilePic: {
         type: String,
-        default: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5OjcBCgoKDQwNGg8PGjclHyU3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N//AABEIAJQAqQMBIgACEQEDEQH/xAAbAAEAAgMBAQAAAAAAAAAAAAAABAUBAgMGB//EADIQAAIBAwIEBAMHBQAAAAAAAAABAgMEESExBRJBUSIyYXFCgZETFSNSU2KxFDOCocH/xAAWAQEBAQAAAAAAAAAAAAAAAAAAAQL/xAAWEQEBAQAAAAAAAAAAAAAAAAAAEQH/2gAMAwEAAhEDEQA/APuIAAAAAAAAMZOc7inDTOX6AdQQ5XcnpGKS9dTm7iq/ix7AWAK37Wr+ozKr1V8efcCxBCjdzXmin7aHencwlo/C/UDsBkAAAAAAAAAAAAAAA0qVY01mT+RitVVKPdvZECc3N5k8sDerXnU0zhdkcgAAMnGrc0aLaqVEmugHUEP7yts7z9+U60ryhV8tVZ7PT+QO4BkDenVnT8r07Mm0q0aq8L1W6K4ym4vMdGgLQHG3rqosPSS3OwAAAAAAAAA1qTUIOTNiFd1OafIto7gcZzlOblI1AAGJNJNvRLr2Mlbxe4aSoRe+svbsByvOITqZhRfLDut5EAAqaAAIl2l9UoNRk3On2fT2LmE4zipReYvZnmyfwu45an2Mn4ZbejIq3AAVmLcZKUXhosKVRVIKXXqiuOtvU5KiztLRgWAAAAAAAANZy5YuT6IrXq8vcm3ksUsd2QQAAAHn72XNd1X+7H00PQHnrpYuaqf53/IHIAFZAAANoS5JxkujTNTKWWkt3ogPSgLRJAjQAALGhPnpxfXqdCLYy8Mo9tSUAAAAAARL56RRFJV98PzIoAAACo4tRcaqrJeGaw/ctzStShWpOnNZiwPOA7XNtO3nyz1XSXRnEqAAAErhtJ1blSa8MNX79DjQozuJqFJZfX0L21oRt6ShHV9X3ZDHUABQAASLJ4qtehNINl/d/wAScAAAAAARr1Zpp9mQyxrx56Ul9CuAAAAAGBicVOLjKKkn0ZBq8LpSeac5Q9Nyc3jdpe7OcrqhHetT+UsgV74TPOlWOPZnWnwqCealRy9I6Ikf11t+rH/ZtG7t5PStT+csAdKdONKPJTiox7I2MRkpeWSfsZQAAAAABJsV4pv5Ew4WkeWkm93qdwAAAAAAV1eHJVa6bosTjcUvtIZXmWwEADOM50wVd7xFtunbvTOsu/sBMuLulb6TlmX5Y7lfW4lWqP8ADxCPossg9dXkFStpznU885S92agBAAAZUpR1i2n6Ml0eI3FN4k1OP7t/qQwFXltfUa/hy4zfwy/4SjzJOs7+VPEKzc4dH1RFXBtTi5zUV1ZzhJSjzJ5T2ZPtKXLHna1ewHdJJJLZGQAAAAAAAAAKjjtCs6DnQ8u9RLdo82e6ZScT4NzuVa0WJbun0fsBQAzKMoNxnFxa3TWGjBUAAEAAAAAAGca4xqXPDODSm41bxNR6U8av3CtuAW9WUHUqaUPhT6v09C/RrGKikkkktkuhsRQAAAAAAAAAAAABFvLChdr8WHiW01o0Ud1wO4pNug1Vj0W0j0wA8PUpzpS5asJQfaSwaHuZRjJcskmn0aI8+HWc/NbU/ksfwEjxwPW/dFj+gvqzeHDbKHlt4fNZBHkYQlUeKcXJ9orJYWvBbqs06ijSj+7f6Hp4QhBYhFRXZLBsFQbLhdvZ+KEeap+eW/yJwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/9k="
+        default: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5OjcBCgoKDQwNGg8PGjclHyU3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N//AABEIAJQApAMBIgACEQEDEQH/xAAbAAEAAgMBAQAAAAAAAAAAAAAABgcDBAUBAv/EADkQAAICAQEEBggEBQUAAAAAAAABAgMEBQYRMUESIVFhccETIiOBkaGx0RQyQuFScnOS8RUzQ1Ni/8QAFgEBAQEAAAAAAAAAAAAAAAAAAAEC/8QAFhEBAQEAAAAAAAAAAAAAAAAAAAER/9oADAMBAAIRAxEAPwC0gAaZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGO66qiqVt9ka648ZSe5Efy9r8KqTjjU2X/APr8ifx6/kBJAROvbSPS9pgNLtjbv8jtaZrmBqTUKLXG3/qsW6Xu5P3AdIAAAAAAAAAAAAAAAAAAAAAMOZlVYWNZkXy6NcFvb8l3mYhW22e7cyGDCXs6V0p7uc3y9y+pRyNY1bI1W9zubjWvyVJ9Ufu+80AAgepuLTi2muDT60eAuCbbLa+8trCzZL06Xs7H+tdj7/qSUqaqydNkbK5dGcGnFrkyz9LzFn4FGSkk7I75Jcpc18SK2gAQAAAAAAAAAAAAAAAAFxRVupXO/Ucq2X6rZbvDf1fItJcV4lVZsHXm5EHxjbNfNgrCADSAAAE32Ftc9NvqfX6O3q8Gv8kIJrsHFrByp8pWpL3L9yESYAEUAAAAAAAAAAAAAAAAK62oxni63f6vq2v0se9Pj895Ypw9qdJeo4itojvyaVvilxlHmvMCAA9aae5pprtPDSAAAFh7KY34bRKekt0rva/Hh8txD9B0meqZii01j1vfbLu7PFljxioxUYpJJbklyIsegAgAAAAAAAAAAAAAAAAAADkats9h6lJ2tOm98bIc/FcyO37H6hBv0N1Fse9uL+G7zJtdbVRHpX2Qrj2zkkc+zaDSq+qWbW/5d7+gEUjsnqsn+WiPjb9kzpYWxqi1LPyekt/XClbk/e/sdaO0mkN7vxaXjCS8jax9U0/Je6jLpk+zppMpjPjY9OLRGjGrjXXHhGKMoAAAEAAAAAAAAAAAAAAAOXr2s1aTQupTyJr2dfm+4Daz9QxtOp9Nl2dFPhFLfKXgiH6ltZmZDcMJLGr4dJdc37+RxMzLvzciV+VN2TlzfBLsXcYSlfVtk7puds5WTfGU22z5AKgGk+KAA3sDV8/Aa/D5Eugv+OXrR+DJXo+1OPluNWbGOPc+rpfol4dnvIMCKtvwBBdndop4LjjZsnPF4Rk+Nf7E5jKMoqUJKUZLemuDQHoAIAAAAAAAAAAA1dSza9PwrMm3hHhH+J8kVpm5V2blWZORLfZN73u5dy7jubZ6g8jOjiQfsqF6y7Zvj8PuR0oAAqAAAAAAAABK9jtYcJrTciXqS/2H2P8Ah+xFD2EpQkpwbUovemuTAtoGno+d/qOm05PV0pLdNLlJcTcMtAACAAAAAAY8i6OPRZdP8tcXJ+4yHJ2qtdWgZTj1OSjD4ySKK8ssndZO2x752ScpeL4nyAEAAUAAAAAAAAAABLNhMrdPJxG+p7rI/R+RLyu9krXVr2OlwsUov+1vyLEIoACAAAAAAHC2ze7Qp99sPqAUqAgAqAAAAAAAAAAAAADobO9WvYP9X7llgEIAAigAA//Z'
+    },
+    bio: {
+        type: String,
+        maxLength: 200
     },
     role: {
         type: String,
-        enum: ["admin","student"],
-        default: "student",
-        required: true
+        enum: [UserRole.USER, UserRole.ADMIN],
+        default: UserRole.USER
+    },
+    friendsCount: {
+        type: Number,
+        default: 0
+    },
+    postCount: {
+        type: Number,
+        default: 0
     }
 }, { timestamps: true });
 
-UserSchema.methods.getJwt = function(){
+userSchema.methods.getJwt = function () {
     const thisuser = this;
-    const token = jwt.sign({_id: thisuser._id},process.env.JWT_SECRET!,{
+    const token = jwt.sign({ _id: thisuser._id }, process.env.JWT_SECRET!, {
         expiresIn: '7d'
     });
-    return token
+    return token;
 }
 
-export const User = mongoose.model('User',UserSchema);
+
+export const User = mongoose.model<IUser>('userSchema', userSchema);
