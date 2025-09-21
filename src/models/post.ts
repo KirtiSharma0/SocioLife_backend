@@ -1,4 +1,4 @@
-import mongoose, { Types, Document } from "mongoose";
+ import mongoose, { Types, Document } from "mongoose";
 
 export interface IPost extends Document {
     caption: string;
@@ -26,7 +26,10 @@ const postSchema = new mongoose.Schema<IPost>(
             ref: "User",
             required: true,
         },
-        images: Array<String>,
+        images: {
+            type: [String],
+            default: []
+        },
         commentCount: {
             type: Number,
             default: 0,
