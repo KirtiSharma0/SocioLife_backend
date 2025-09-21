@@ -1,124 +1,76 @@
-export const handleLike = async (req: Request, res: Response) => {
-  try {
-    const { like, targetType, targetId } = req.params;
-    if (!targetType || !targetId) {
-      res.status(400).json({
-        success: false,
-        message: "some required fields arent present",
-      });
-      return;
-    }
+ import { Request, Response } from 'express'
+import { IUser, User } from '../models/user';
+import { pick } from 'lodash';
 
-    if (!isValidObjectId(targetId)) {
-      res.status(400).json({
-        success: false,
-        message: "invalid content id",
-      });
-      return;
-    }
-    const allowedTargetTypeValues = ["notice", "event", "comment"];
-    if (!allowedTargetTypeValues.includes(targetType)) {
-      res.status(400).json({
-        success: false,
-        message: "invalid target type",
-      });
-      return;
-    }
+export const getProfile = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
 
-    if(like!==LikeType.LIKE && like!==LikeType.UNLIKE){
-      res.status(400).json({
-        success: false,
-        message: "invalid request"
-      })
-      return;
-    }
+        if (!id) {
+            res.status(400).json({
+                success: false,
+                message: "id not present"
+            });
+            return;
+        }
+        const user: Partial<IUser> | null = await User.findById(id).select("userName profilePic bio private friendsCount postCount");
 
-    const { user } = req as any as { user: userType };
-    let trueTarget;
+        if (!user) {
+            res.status(404).json({
+                success: false,
+                message: 'user not found'
+            });
+            return;
+        }
 
-    switch (targetType) {
-      case ResourceType.NOTICE:
-        const notice = await Notice.findById(targetId);
-        trueTarget = notice;
-        break;
-
-      case ResourceType.EVENT:
-        const event = await Event.findById(targetId);
-        trueTarget = event;
-        break;
-
-      case ResourceType.COMMENT:
-        const comment = await Comment.findById(targetId);
-        trueTarget = comment;
-        break;
-    }
-
-    if (!trueTarget) {
-      res.status(400).json({
-        success: false,
-        message: "target content not found",
-      });
-      return;
-    }
-
-    if (like === LikeType.LIKE) {
-      const existingLike = await Like.findOne({
-        userId: user._id,
-        targetType,
-        target: trueTarget
-      })
-      if(existingLike){
-        res.status(409).json({
-          success: false,
-          message: "content already liked"
+        res.status(200).json({
+            success: true,
+            message: "user fetched successfully",
+            data: user
         });
         return;
-      }
 
-      const newLike = new Like({
-        userId: user._id,
-        targetType,
-        target: trueTarget,
-      });
-
-      await newLike.save();
-      trueTarget.likeCount++;
-      await trueTarget.save();
-
-      res.status(201).json({
-        success: true,
-        message: "liked successfully",
-      });
-      return;
-    } else {
-      const deletedLike = await Like.findOneAndDelete({
-        userId: user._id,
-        targetType,
-        target: trueTarget
-      });
-
-      if(!deletedLike){
-        res.status(409).json({
-          success: false,
-          message: "like doesnt exist"
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "internal server error"
         });
         return;
-      }
-      trueTarget.likeCount--;
-      await trueTarget.save();
-      res.status(200).json({
-        success: true,
-        message: "content unliked successfully"
-      });
-      return;
     }
+}
 
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "internal server error",
-      error: error,
-    });
-    return;
-  }
-};
+
+export const updateProfile = async (req: Request, res: Response) => {
+    try{
+        const updatableFields = ["userName", "profilePic", "bio"];
+        const { user } = (req as any) as { user: IUser};
+
+        const updates = pick(req.body, updatableFields);
+
+        const updatedUser = await User.findByIdAndUpdate(user._id, updates, {
+            new: true,
+            runValidators: true
+        });
+
+        if(!updatedUser){
+            res.status(404).json({
+                success: false,
+                message: "user not found"
+            });
+            return;
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "user updated successfully"
+        });
+        return;
+
+    } catch(error){
+        res.status(500).json({
+            success: false,
+            message: "internal server error"
+        });
+        return;
+    }
+}
