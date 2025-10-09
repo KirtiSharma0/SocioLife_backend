@@ -1,10 +1,10 @@
-import { Router } from "express";
-import { addComment, getComments } from "../controllers/comment.controller";
-import { adminAuth } from "../middlewares/userAuth";
+ import { Router } from "express";
+import userAuth from "../middlewares/userAuth";
+import { upload } from "../middlewares/multer";
+import { addCommentOnPost } from "../controllers/comment.controller";
 
-const commentRouter = Router();
+const commentRouter: Router = Router();
 
-commentRouter.post("/postComment/:postType/:postId", adminAuth, addComment);
-commentRouter.get("/getComment/:postType", adminAuth, getComments);
+commentRouter.post('/commentOnPost/:postId', userAuth, upload.array("files", 10), addCommentOnPost);
 
 export default commentRouter;
