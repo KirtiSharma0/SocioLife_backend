@@ -1,140 +1,67 @@
-import { Request, Response } from "express";
-import { PostType, ResourceType } from "../Types/resource.types";
-import { userType } from "../zod/user.zod";
-import { Notice } from "../models/notice";
+ import { Request, Response } from "express";
+import { IUser } from "../models/user";
+import { Post } from "../models/post";
+import Comment from "../models/comment";
 import { uploadOnCloudinary } from "../utils/cloudinary";
-import { Comment } from "../models/comment";
+import fs from 'fs'
 
-export const addComment = async (req: Request, res: Response) => {
-  try {
-    const { user } = req as any as { user: userType };
-    console.log("user: ", user);
-    const { postType, postId } = req.params;
-    console.log("postType, PostId,", postType, postId);
-    const { targetType, targetId, commentContent } = req.body as {
-      targetType: ResourceType;
-      targetId: string;
-      commentContent: string;
-    };
-    console.log("target: ", targetType, targetId, commentContent);
+export const addCommentOnPost = async (req: Request, res: Response) => {
+    try {
+        const { comment } = req.body as { comment: string };
+        const { postId } = req.params;
+        const { user } = (req as any) as { user: IUser };
 
-    if (!postType || !postId || !targetId || !targetType || !commentContent) {
-      res.status(400).json({
-        success: false,
-        message: "invalid request",
-      });
-      return;
-    }
+        const post = await Post.findByIdAndUpdate(postId, {
+            commentCount: { $inc: 1 }
+        });
 
-    if (
-      (postType === PostType.EVENT && targetType === ResourceType.NOTICE) ||
-      (postType === PostType.NOTICE && targetType === ResourceType.EVENT)
-    ) {
-      res.status(400).json({
-        success: false,
-        message: "invalid request",
-      });
-      return;
-    }
+        if (!post) {
+            res.status(404).json({
+                success: false,
+                message: "post not found"
+            });
+            return;
+        }
 
-    let Post: any = null;
-    if (postType === PostType.EVENT) Post = Event;
-    else if (postType === PostType.NOTICE) Post = Notice;
-    else {
-      res.status(400).json({
-        success: false,
-        message: "invalid post type",
-      });
-      return;
-    }
+        const file = req.files as Express.Multer.File | undefined;
+        let fileDoc: string | null = null;
+        if (file) {
+            try {
+                const url = await uploadOnCloudinary(file.path);
+                await fs.promises.unlink(file.path);
+                fileDoc = url;
+            } catch (fileError) {
+                console.error("Error processing file:", fileError);
+                if (fs.existsSync(file.path)) {
+                    fs.unlinkSync(file.path);
+                }
+            }
+        }
 
-    let Target: any = null;
-    if (targetType === ResourceType.COMMENT) Target = Comment;
-    else if (targetType === ResourceType.EVENT) Target = Event;
-    else if (targetType === ResourceType.NOTICE) Target = Notice;
-    else {
-      res.status(400).json({
-        success: false,
-        message: "invalid target type",
-      });
-      return;
-    }
+        const newComment = await Comment.create({
+            user: user._id,
+            post: post._id,
+            text: comment
+        });
 
-    const mediaUrls: string[] = [];
-    if (req.files && Array.isArray(req.files)) {
-      for (const file of req.files) {
-        const url = await uploadOnCloudinary(file.path);
-        mediaUrls.push(url);
-      }
-    }
+        if (fileDoc) {
+            newComment.mediaUrl = fileDoc;
+            await newComment.save();
+        }
 
-    const [post, target] = await Promise.all([
-      Post.findById(postId),
-      Target.findById(targetId),
-    ]);
-
-    if (!post || !target) {
-      res.status(400).json({
-        success: false,
-        message: `${targetType} or ${postType} not found`,
-      });
-      return;
-    }
-    console.log("check 1");
-    const createdComment = new Comment({
-      content: commentContent,
-      createdBy: user._id,
-      parentId: targetType === ResourceType.COMMENT ? targetId : null,
-      targetType,
-      targetPostId: postId,
-      mediaUrls,
-    });
-
-    if (targetType === ResourceType.COMMENT) {
-      if (target.depth === 2) {
-        res.status(422).json({
-          success: false,
-          message: "max comment depth reached",
+        res.status(201).json({
+            success: true,
+            message: "commented successfully",
+            data: newComment
         });
         return;
-      }
-      createdComment.depth = target.depth + 1;
-      target.commentCount++;
-      post.commentCount++;
 
-      const [newComment, updatedTarget, updatedPost] = await Promise.all([
-        await createdComment.save(),
-        await target.save(),
-        await post.save(),
-      ]);
-
-      res.status(201).json({
-        success: true,
-        message: "comment successfully created",
-        data: [newComment, updatedTarget, updatedPost],
-      });
-      return;
-    } else {
-      post.commentCount++;
-
-      const [newComment, updatedPost] = await Promise.all([
-        await createdComment.save(),
-        await post.save(),
-      ]);
-
-      res.status(201).json({
-        success: true,
-        message: "comment successfully created",
-        data: [newComment, updatedPost],
-      });
-      return;
+    } catch (error) {
+        console.log("error: ", error);
+        res.status(500).json({
+            success: false,
+            message: "internal server error"
+        });
+        return;
     }
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      success: false,
-      message: "internal server error",
-    });
-    return;
-  }
-};
+}
